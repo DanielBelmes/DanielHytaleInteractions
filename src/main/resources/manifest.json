@@ -1,0 +1,17 @@
+{
+    "Group": "daniel.belmes",
+    "Name": "HytaleInteractions",
+    "Version": "${version}",
+    "Description": "Adds third party hytale interactions",
+    "Authors": [
+        {
+            "Name": "Daniel Belmes"
+        }
+    ],
+    "Website": "",
+    "ServerVersion": "*",
+    "Dependencies": {},
+    "OptionalDependencies": {},
+    "DisabledByDefault": false,
+    "Main": "daniel.belmes.HytaleInteractions.HytaleInteractions"
+}
