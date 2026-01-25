@@ -322,7 +322,7 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
          BlockRadiusInteraction.class, BlockRadiusInteraction::new, SimpleBlockInteraction.CODEC)
          .documentation("Runs a chain on surrounding blocks based on radius and face of targetted block")
          .append(new KeyedCodec<>("Radius", new Vector3iArrayCodec(), true), (o, radius) -> o.radius = radius, o -> o.radius)
-         .documentation("The 3d block distance to apply interaction too.(3x3 would be [1,1,1])")
+         .documentation("The 3d block distance to apply interaction too.(3x3x1 would be [1,1,0])")
          .add()
          .append(new KeyedCodec<>("Offset", new Vector3iArrayCodec(), true), (o, offset) -> o.offset = offset, o -> o.offset)
          .documentation("Offset that changes where the center interaction block is.")
