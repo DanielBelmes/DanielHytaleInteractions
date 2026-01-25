@@ -126,18 +126,18 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
          MiningPlane plane,
          TriIntConsumer consumer) {
       Vector3i offsetBlock = new Vector3i().add(targetBlock, offset);
-      for (int x = -radius.x; x <= radius.x; x++) {
-         for (int y = -radius.y; y <= radius.y; y++) {
-            for (int z = -radius.z; z <= radius.z; z++) {
+      for (int d1 = -radius.x; d1 <= radius.x; d1++) {
+         for (int d2 = -radius.y; d2 <= radius.y; d2++) {
+            for (int d3 = -radius.z; d3 <= radius.z; d3++) {
                switch (plane) {
                   case XZ:
-                     consumer.accept(x + offsetBlock.x, offsetBlock.y, z + offsetBlock.z);
+                     consumer.accept(d1 + offsetBlock.x, d3 + offsetBlock.y, d2 + offsetBlock.z);
                      break;
                   case XY:
-                     consumer.accept(x + offsetBlock.x, y + offsetBlock.y, offsetBlock.z);
+                     consumer.accept(d1 + offsetBlock.x, d2 + offsetBlock.y, d3 + offsetBlock.z);
                      break;
                   case ZY:
-                     consumer.accept(offsetBlock.x, y + offsetBlock.y, z + offsetBlock.z);
+                     consumer.accept(d3 + offsetBlock.x, d1 + offsetBlock.y, d2 + offsetBlock.z);
                      break;
                   default:
                      continue;
