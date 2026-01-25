@@ -315,7 +315,7 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
    // }
 
    public String toString() {
-      return "BlockRadiusInteraction{radius=" + this.radius.toString() + "} " + super.toString();
+      return "BlockRadiusInteraction{radius=" + this.radius.toString() + ", offset=" + this.offset.toString() + "} " + super.toString();
    }
 
    public static final BuilderCodec<BlockRadiusInteraction> CODEC = BuilderCodec.builder(
