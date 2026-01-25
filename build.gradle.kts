@@ -32,7 +32,7 @@ tasks {
 
     jar {
         archiveBaseName.set("HytaleInteractions")
-        archiveVersion.set(project.version.toString())
+        archiveVersion.set("v"+project.version.toString())
         archiveClassifier.set("")
     }
 
