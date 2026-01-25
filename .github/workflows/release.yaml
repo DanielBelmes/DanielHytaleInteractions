@@ -11,9 +11,6 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v4
-    - name: Set Release Tag
-        id: vars
-        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
@@ -26,4 +23,4 @@ jobs:
     - name: Create Release & Upload dist/index.js
       uses: softprops/action-gh-release@v2
       with:
-        files: ./build/libs/HytaleInteractions-${{ steps.vars.outputs.tag }}.jar
+        files: ./build/libs/HytaleInteractions-${{ github.ref_name }}.jar
