@@ -46,7 +46,7 @@ public class ModConfigsProvider {
                 return false;
             }
         } catch (Exception e) {
-            HytaleLogger.getLogger().atSevere().withCause(e).log("Failed to load Config for" + configDir.toString());
+            HytaleLogger.getLogger().atWarning().withCause(e).log("Failed to load Config for" + configDir.toString());
             return false;
         }
         return false;

@@ -27,8 +27,10 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldConfig;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.meta.MetaKey;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -39,27 +41,25 @@ import daniel.belmes.HytaleInteractions.ModConfigsProvider;
 
 public class ConfigInteraction extends SimpleInteraction {
     public static final MetaKey<Boolean> BOOL_VAL = META_REGISTRY.registerMetaObject(data -> false);
-     public static final BuilderCodec<ConfigInteraction> CODEC = BuilderCodec.builder(
-            ConfigInteraction.class, ConfigInteraction::new, SimpleInteraction.CODEC
-        )
-        .documentation("An interaction that is successful if the given config variable is true.")
-        .appendInherited(
-            new KeyedCodec<>("ModName", Codec.STRING),
-            (interaction, s) -> interaction.modName = s,
-            interaction -> interaction.modName,
-            (interaction, parent) -> interaction.modName = parent.modName
-        )
-        .add()
-        .appendInherited(
-            new KeyedCodec<>("ConfigVariable", Codec.STRING),
-            (interaction, s) -> interaction.configVariable = s,
-            interaction -> interaction.configVariable,
-            (interaction, parent) -> interaction.configVariable = parent.configVariable
-        )
-        .add()
-        .build();
+    public static final BuilderCodec<ConfigInteraction> CODEC = BuilderCodec.builder(
+            ConfigInteraction.class, ConfigInteraction::new, SimpleInteraction.CODEC)
+            .documentation("An interaction that is successful if the given config variable is true.")
+            .appendInherited(
+                    new KeyedCodec<>("ModFolder", Codec.STRING),
+                    (interaction, s) -> interaction.modFolder = s,
+                    interaction -> interaction.modFolder,
+                    (interaction, parent) -> interaction.modFolder = parent.modFolder)
+            .documentation("Override ModFolder to read incase Interaction is not used on a held item")
+            .add()
+            .appendInherited(
+                    new KeyedCodec<>("ConfigVariable", Codec.STRING, true),
+                    (interaction, s) -> interaction.configVariable = s,
+                    interaction -> interaction.configVariable,
+                    (interaction, parent) -> interaction.configVariable = parent.configVariable)
+            .add()
+            .build();
 
-    private String modName;
+    private String modFolder;
     private String configVariable;
 
     protected Boolean loadConfigAndGetValue(Path configDir, String variable) {
@@ -68,7 +68,7 @@ public class ConfigInteraction extends SimpleInteraction {
         try {
             if (Files.exists(configFile)) {
                 BsonDocument document = BsonUtil.readDocumentNow(configFile);
-                if(document != null) {
+                if (document != null) {
                     BsonBoolean result = document.getBoolean(variable);
                     return result.getValue();
                 }
@@ -82,19 +82,39 @@ public class ConfigInteraction extends SimpleInteraction {
         return false;
     }
 
+    protected String escapeFilePath (String str) {
+        return str.replace(":","_").replace("*","_").replace("/","_").replace("\\","_").replace("\"","_").replace("|","_").replace("?","_").replace("<","_").replace(">","_");
+    }
+
     protected void tick0(
             boolean firstRun, float time, InteractionType type, InteractionContext context,
             CooldownHandler cooldownHandler) {
+        ItemStack itemStack = context.getHeldItem();
         if (!Interaction.failed(context.getState().state)) {
             if (firstRun) {
-                CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-                Path configDir = Path.of("mods", modName);
-                DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
-                boolean value = ModConfigsProvider.get(modName, configVariable);
-                if (value) {
-                    context.getState().state = InteractionState.Finished;
-                } else {
+                if (itemStack == null) {
                     context.getState().state = InteractionState.Failed;
+                } else {
+                    Item item = itemStack.getItem();
+                    if (item == null) {
+                        context.getState().state = InteractionState.Failed;
+                    } else {
+                        String ModIdentifier;
+                        if(modFolder != null) {
+                            ModIdentifier = escapeFilePath(modFolder);
+                        } else {
+                            ModIdentifier = escapeFilePath(item.getAssetStore().getAssetMap().getAssetPack(item.getId()));
+                        }
+                        CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+                        Path configDir = Path.of("mods", ModIdentifier);
+                        DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
+                        boolean value = ModConfigsProvider.get(ModIdentifier, configVariable);
+                        if (value) {
+                            context.getState().state = InteractionState.Finished;
+                        } else {
+                            context.getState().state = InteractionState.Failed;
+                        }
+                    }
                 }
             }
         }
