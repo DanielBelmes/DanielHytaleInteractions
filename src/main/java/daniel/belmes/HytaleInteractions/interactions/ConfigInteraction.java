@@ -62,10 +62,6 @@ public class ConfigInteraction extends SimpleInteraction {
     private String modName;
     private String configVariable;
 
-    public WaitForDataFrom getWaitForDataFrom() {
-        return WaitForDataFrom.Client;
-    }
-
     protected Boolean loadConfigAndGetValue(Path configDir, String variable) {
         Path configFile = configDir.resolve("config.json");
         HytaleLogger.getLogger().atInfo().log("Config File: " + configFile.toString());
@@ -89,10 +85,6 @@ public class ConfigInteraction extends SimpleInteraction {
     protected void tick0(
             boolean firstRun, float time, InteractionType type, InteractionContext context,
             CooldownHandler cooldownHandler) {
-        // get config
-        // check config
-        // Next if True
-        // Failed if False
         if (!Interaction.failed(context.getState().state)) {
             if (firstRun) {
                 CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
