@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.registry.CodecMapRegistry;
 
 import daniel.belmes.HytaleInteractions.interactions.BlockRadiusInteraction;
+import daniel.belmes.HytaleInteractions.interactions.ConfigInteraction;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 
@@ -26,6 +27,7 @@ public class HytaleInteractions extends JavaPlugin {
         CodecMapRegistry.Assets<Interaction, ? extends Codec<? extends Interaction>> interactionRegistry = this
                 .getCodecRegistry(Interaction.CODEC);
         interactionRegistry.register("BlockRadius", BlockRadiusInteraction.class, BlockRadiusInteraction.CODEC);
+        interactionRegistry.register("ConfigCondition", ConfigInteraction.class, ConfigInteraction.CODEC);
         LOGGER.atInfo().log("HytaleInteractions has finished registering interactions!");
     }
 }
