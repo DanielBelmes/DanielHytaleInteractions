@@ -21,13 +21,13 @@ import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.BlockFace;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionChainData;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -51,7 +51,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 
 public class BlockRadiusInteraction extends SimpleBlockInteraction {
-   public static final MetaKey<Set<BlockPosition>> HIT_BLOCKS = META_REGISTRY.registerMetaObject(i -> new HashSet<>());
+   public static final MetaKey<Set<BlockPosition>> FOR_BLOCKS = META_REGISTRY.registerMetaObject(i -> new HashSet<>());
    public static final MetaKey<DynamicMetaStore<Interaction>> SELECT_META_STORE = CONTEXT_META_REGISTRY
          .registerMetaObject(data -> null);
    protected Vector3i radius;
@@ -63,7 +63,7 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
       this.offset = new Vector3i();
    }
 
-    protected enum MiningPlane {
+   protected enum MiningPlane {
       XZ,
       XY,
       ZY
@@ -90,11 +90,11 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
                .log("BlockRadiusInteraction requires a Player but was used for: %s", ref);
       } else {
          if (forBlock != null) {
+            BlockFace face = context.getClientState().blockFace;
+            MiningPlane plane = getMiningPlane(face);
+
             DynamicMetaStore<Interaction> instanceStore = context.getInstanceStore();
-
-            MiningPlane plane = getMiningPlaneFromPlayer(ref, playerComponent, targetBlock);
-
-            Set<BlockPosition> forBlocks = (Set) instanceStore.getMetaObject(HIT_BLOCKS);
+            Set<BlockPosition> forBlocks = (Set) instanceStore.getMetaObject(FOR_BLOCKS);
             RootInteraction rootForBlock = RootInteraction.getRootInteractionOrUnknown(this.forBlock);
 
             blocksFromRadius(targetBlock, offset, radius, plane, (x, y, z) -> {
@@ -131,13 +131,16 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
             for (int d3 = -radius.z; d3 <= radius.z; d3++) {
                switch (plane) {
                   case XZ:
-                     consumer.accept(d1 + offsetBlock.x, d3 + offsetBlock.y, d2 + offsetBlock.z);
+                     consumer.accept(d1 + targetBlock.x + offset.x, d3 + targetBlock.y + offset.z,
+                           d2 + targetBlock.z + offset.y);
                      break;
                   case XY:
-                     consumer.accept(d1 + offsetBlock.x, d2 + offsetBlock.y, d3 + offsetBlock.z);
+                     consumer.accept(d1 + targetBlock.x + offset.x, d2 + targetBlock.y + offset.y,
+                           d3 + targetBlock.z + offset.z);
                      break;
                   case ZY:
-                     consumer.accept(d3 + offsetBlock.x, d1 + offsetBlock.y, d2 + offsetBlock.z);
+                     consumer.accept(d3 + targetBlock.x + offset.z, d1 + targetBlock.y + offset.x,
+                           d2 + targetBlock.z + offset.y);
                      break;
                   default:
                      continue;
@@ -147,184 +150,56 @@ public class BlockRadiusInteraction extends SimpleBlockInteraction {
       }
    }
 
-   // Adopted from
-   // https://stackoverflow.com/questions/31640145/get-the-side-a-player-is-looking-on-the-block-bukkit
-   // user andrewgazelka
-   private static BlockFace blockFaceCollide(Vector3d startLocation, Vector3d direction, Box objectBoundry) {
-      double directionX = direction.getX();
-      double directionY = direction.getY();
-      double directionZ = direction.getZ();
-      Vector3d min = objectBoundry.min;
-      Vector3d max = objectBoundry.max;
-
-      if (directionY > 0) { // Looking +Y
-         double b = min.y - startLocation.getY(); // Bottom of voxel Y - player position
-         double tempConstant = b / directionY; // b / directionY
-         if (tempConstant >= 0) {
-            double xAtCollide = tempConstant * directionX + startLocation.getX();
-            double zAtCollide = tempConstant * directionZ + startLocation.getZ();
-            if (between(xAtCollide, min.x, max.x, 0)
-                  && between(zAtCollide, min.z, max.z, 0)) {
-               return BlockFace.DOWN;
-            }
-         }
-      } else { // Looking -Y
-         double e = max.y - startLocation.getY();
-         double tempConstant = e / directionY;
-         if (tempConstant >= 0) {
-            double xAtCollide = tempConstant * directionX + startLocation.getX();
-            double zAtCollide = tempConstant * directionZ + startLocation.getZ();
-            if (between(xAtCollide, min.x, max.x, 0)
-                  && between(zAtCollide, min.z, max.z, 0)) {
-               return BlockFace.UP;
-            }
-         }
+   private static MiningPlane getMiningPlane(BlockFace face) {
+      if (face == null) {
+         return MiningPlane.XY;
       }
 
-      if (directionX > 0) {
-         double d = min.x - startLocation.getX();
-         double tempConstant = d / directionX;
-         if (tempConstant >= 0) {
-            double yAtCollide = tempConstant * directionY + startLocation.getY();
-            double zAtCollide = tempConstant * directionZ + startLocation.getZ();
-            if (between(yAtCollide, min.y, max.y, 0)
-                  && between(zAtCollide, min.z, max.z, 0)) {
-               return BlockFace.EAST;
-            }
-         }
-      } else {
-         double a = max.x - startLocation.getX();
-         double tempConstant = a / directionX;
-         if (tempConstant >= 0) {
-            double yAtCollide = tempConstant * directionY + startLocation.getY();
-            double zAtCollide = tempConstant * directionZ + startLocation.getZ();
-            if (between(yAtCollide, min.y, max.y, 0)
-                  && between(zAtCollide, min.z, max.z, 0)) {
-               return BlockFace.WEST;
-            }
-         }
+      switch (face) {
+         case BlockFace.North:
+         case BlockFace.South:
+            return MiningPlane.XY;
+         case BlockFace.East:
+         case BlockFace.West:
+            return MiningPlane.ZY;
+         case BlockFace.Up:
+         case BlockFace.Down:
+            return MiningPlane.XZ;
+         default:
+            return MiningPlane.XY;
       }
-
-      if (directionZ > 0) {
-         double c = min.z - startLocation.getZ();
-         double tempConstant = c / directionZ;
-         if (tempConstant >= 0) {
-            double yAtCollide = tempConstant * directionY + startLocation.getY();
-            double xAtCollide = tempConstant * directionX + startLocation.getX();
-            if (between(yAtCollide, min.y, max.y, 0)
-                  && between(xAtCollide, min.x, max.x, 0)) {
-               return BlockFace.NORTH;
-            }
-         }
-      } else {
-         double f = max.z - startLocation.getZ();
-         double tempConstant = f / directionZ;
-         if (tempConstant >= 0) {
-            double yAtCollide = tempConstant * directionY + startLocation.getY();
-            double xAtCollide = tempConstant * directionX + startLocation.getX();
-            if (between(yAtCollide, min.y, max.y, 0)
-                  && between(xAtCollide, min.x, max.x, 0)) {
-               return BlockFace.SOUTH;
-            }
-         }
-      }
-      return null;
-   }
-
-   private static boolean between(double num, double a, double b, double EOF) {
-      if (a <= b)
-         return num + EOF >= a && num - EOF <= b;
-      return num + EOF >= b && num - EOF <= a;
-   }
-
-   private static Box getAxisAllignedBoundBox(World world, Vector3i targetBlock) {
-      BlockType blockType = world.getBlockType(targetBlock);
-      if(blockType != null) {
-         BlockBoundingBoxes hitbox = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-         if(hitbox != null) {
-            Box boundingBox = hitbox.get(0).getBoundingBox(); // Gotta deal with rotation if someone wants to use this for that
-            return boundingBox.getBox(targetBlock.toVector3d());
-         }
-      }
-      return null;
-   }
-
-   private static MiningPlane getMiningPlaneFromPlayer(Ref<EntityStore> ref,
-         Player player, Vector3i targetBlock) {
-      try {
-         TransformComponent transform = ref.getStore().getComponent(ref, TransformComponent.getComponentType());
-         if (transform == null) {
-            return MiningPlane.XY;
-         }
-
-         Vector3d playerPos = transform.getPosition();
-         if (playerPos == null) {
-            return MiningPlane.XY;
-         }
-
-         World world = player.getWorld();
-         if (world == null) {
-            return MiningPlane.XY;
-         }
-
-         HeadRotation headRotationComponent = ref.getStore().getComponent(ref, HeadRotation.getComponentType());
-         assert headRotationComponent != null;
-         Vector3d direction = headRotationComponent.getDirection();
-
-         Transform look = TargetUtil.getLook(ref, ref.getStore());
-
-         Box objectBoundry = getAxisAllignedBoundBox(world, targetBlock);
-         if(objectBoundry == null) {
-            return MiningPlane.XY;
-         }
-
-         BlockFace face = blockFaceCollide(look.getPosition(), direction, objectBoundry);
-         if (face == null) {
-            return MiningPlane.XY;
-         }
-
-         switch (face) {
-            case BlockFace.NORTH:
-            case BlockFace.SOUTH:
-               return MiningPlane.XY;
-            case BlockFace.EAST:
-            case BlockFace.WEST:
-               return MiningPlane.ZY;
-            case BlockFace.UP:
-            case BlockFace.DOWN:
-               return MiningPlane.XZ;
-         }
-      } catch (Exception e) {
-         HytaleLogger.getLogger().atWarning().withCause(e).log("Error calculating mining plane");
-      }
-
-      return MiningPlane.XY;
    }
 
    // Packet logic is hardcoded in Interaction.java
-   
+
    // protected com.hypixel.hytale.protocol.Interaction generatePacket() {
-   //    return new daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction();
+   // return new
+   // daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction();
    // }
 
-   // protected void configurePacket(com.hypixel.hytale.protocol.Interaction packet) {
-   //    super.configurePacket(packet);
-   //    daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction p = (daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction)packet;
-   //    p.radius = this.radius;
-   //    p._offset = this.offset;
+   // protected void configurePacket(com.hypixel.hytale.protocol.Interaction
+   // packet) {
+   // super.configurePacket(packet);
+   // daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction p =
+   // (daniel.belmes.hytaleinteractions.protocol.BlockRadiusInteraction)packet;
+   // p.radius = this.radius;
+   // p._offset = this.offset;
    // }
 
    public String toString() {
-      return "BlockRadiusInteraction{radius=" + this.radius.toString() + ", offset=" + this.offset.toString() + "} " + super.toString();
+      return "BlockRadiusInteraction{radius=" + this.radius.toString() + ", offset=" + this.offset.toString() + "} "
+            + super.toString();
    }
 
    public static final BuilderCodec<BlockRadiusInteraction> CODEC = BuilderCodec.builder(
          BlockRadiusInteraction.class, BlockRadiusInteraction::new, SimpleBlockInteraction.CODEC)
          .documentation("Runs a chain on surrounding blocks based on radius and face of targetted block")
-         .append(new KeyedCodec<>("Radius", new Vector3iArrayCodec(), true), (o, radius) -> o.radius = radius, o -> o.radius)
+         .append(new KeyedCodec<>("Radius", new Vector3iArrayCodec(), true), (o, radius) -> o.radius = radius,
+               o -> o.radius)
          .documentation("The 3d block distance to apply interaction too.(3x3x1 would be [1,1,0])")
          .add()
-         .append(new KeyedCodec<>("Offset", new Vector3iArrayCodec(), true), (o, offset) -> o.offset = offset, o -> o.offset)
+         .append(new KeyedCodec<>("Offset", new Vector3iArrayCodec(), true), (o, offset) -> o.offset = offset,
+               o -> o.offset)
          .documentation("Offset that changes where the center interaction block is.")
          .add()
          .<String>appendInherited(
