@@ -13,5 +13,6 @@
     "Dependencies": {},
     "OptionalDependencies": {},
     "DisabledByDefault": false,
+    "IncludesAssetPack": false,
     "Main": "daniel.belmes.HytaleInteractions.HytaleInteractions"
 }

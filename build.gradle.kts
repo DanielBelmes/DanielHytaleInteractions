@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "daniel.belmes"
-version = "1.1.0"
+version = "1.1.1"
 
 // Path to your Hytale installation
 val hytaleServerJar = env.HYTALE_SERVER_JAR
